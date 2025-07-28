@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>GET & POST Parameter Viewer</title>
+  <title>GET & POST Viewer + Sophos Response</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     h2 { margin-bottom: 10px; }
@@ -17,21 +17,30 @@
   <h2>POST JSON Data:</h2>
   <div class="box" id="postBox"><i>Waiting for POST data...</i></div>
 
+  <h2>Sophos-Compatible Response:</h2>
+  <div class="box" id="responseBox"></div>
+
   <script>
-    // 🔹 Display all GET parameters from URL
-    const getParams = new URLSearchParams(window.location.search);
     const getBox = document.getElementById("getBox");
+    const postBox = document.getElementById("postBox");
+    const responseBox = document.getElementById("responseBox");
+
+    const responseParams = [];
+
+    // 🔹 Handle GET parameters
+    const getParams = new URLSearchParams(window.location.search);
     if ([...getParams].length === 0) {
       getBox.innerHTML = "<i>No GET parameters received.</i>";
     } else {
       let out = "";
       getParams.forEach((value, key) => {
         out += `<p><strong>${key}</strong>: ${value}</p>`;
+        responseParams.push(value); // Store values for response
       });
       getBox.innerHTML = out;
     }
 
-    // 🔸 Listen for a POST request (must come via fetch from same-origin or CORS-enabled backend)
+    // 🔸 Function to simulate POST data receiving (for local simulation only)
     async function receivePostData() {
       try {
         const response = await fetch(window.location.href, {
@@ -39,28 +48,35 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ trigger: true })  // optional request to get dummy data
+          body: JSON.stringify({ status: "200", message: "OTP Verified Successfully" })
         });
 
         const jsonData = await response.json();
-        const postBox = document.getElementById("postBox");
 
         if (Object.keys(jsonData).length === 0) {
           postBox.innerHTML = "<i>No POST data received.</i>";
         } else {
           let out = "";
-          for (let key in jsonData) {
-            out += `<p><strong>${key}</strong>: ${jsonData[key]}</p>`;
-          }
+          Object.entries(jsonData).forEach(([key, value]) => {
+            out += `<p><strong>${key}</strong>: ${value}</p>`;
+            responseParams.push(value); // Store values for response
+          });
           postBox.innerHTML = out;
         }
+
+        // ✅ Compose Sophos response format: status={0}&message={1}
+        const formatted = `status=${responseParams[0] || ''}&message=${responseParams[1] || ''}`;
+        responseBox.innerText = formatted;
+
       } catch (err) {
-        document.getElementById("postBox").innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+        postBox.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
       }
     }
 
-    // Call only if you expect a POST request (optional)
-    // receivePostData();  <-- only if you're triggering it actively
+    // Uncomment to simulate POST call from client itself:
+    // receivePostData();
+
+    // If you expect POST externally (e.g., from firewall), use a backend to echo it back
   </script>
 </body>
 </html>
